@@ -45,7 +45,7 @@ class Grid {
                 const tileColor = tile.color;
 
                 const tileImageKey = `tile_${tileColor}_${tileType.toLowerCase()}`;
-
+                console.log(`info: drawing ${tileImageKey} at ${row}, ${col}`);
                 const tileImage = assets[tileImageKey];
 
                 const x = col * (tileSize + padding);
@@ -54,6 +54,31 @@ class Grid {
                 ctx.drawImage(tileImage, x, y, tileSize, tileSize);
             }
         }
+    }
+
+    attemptSwap(row1, col1, row2, col2) {
+        console.log(`info: attempting swap of ${row1}, ${col1} with ${row2}, ${col2}`);
+        // Check if the tiles are adjacent
+        if (Math.abs(row1 - row2) + Math.abs(col1 - col2) !== 1) {
+            console.log("info: tiles are not adjacent");
+            return; // Not adjacent
+        }
+
+        // Swap the tiles
+        this.swapTiles(row1, col1, row2, col2);
+
+        // Check for matches (implement later)
+        // If no matches, swap back (implement later)
+    }
+
+    swapTiles(row1, col1, row2, col2) {
+        // Store the types of the tiles
+        const type1 = this.grid[row1][col1].type;
+        const type2 = this.grid[row2][col2].type;
+
+        // Swap the types
+        this.grid[row1][col1].type = type2;
+        this.grid[row2][col2].type = type1;
     }
 }
 
@@ -126,4 +151,36 @@ window.onload = function() {
         ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
         gridObj.draw(ctx, assets, tileSize, padding); // Draw the grid
     }
+
+    let selectedTile = null;
+
+    canvas.addEventListener('mousedown', function(event) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const col = Math.floor(x / (tileSize + padding));
+        const row = Math.floor(y / (tileSize + padding));
+
+        if (col >= 0 && col < gridWidth && row >= 0 && row < gridHeight) {
+            handleTileClick(row, col);
+        }
+    });
+
+    function handleTileClick(row, col) {
+        if (selectedTile === null) {
+            // First tile selected
+            selectedTile = { row: row, col: col };
+            console.log(`info: first tile selected at ${row}, ${col}`);
+            draw();
+        } else {
+            // Second tile selected - attempt to swap
+            const firstTile = selectedTile;
+            selectedTile = null; // Reset selection
+            gridObj.attemptSwap(firstTile.row, firstTile.col, row, col);
+            draw();
+        }
+    }
+
+
 };
