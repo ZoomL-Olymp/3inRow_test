@@ -6,6 +6,8 @@ class Tile {
         this.color = color;
         this.isLocked = false;
         this.isSelected = false;
+        this.isMatched = false;
+        this.alpha = 1;
     }
 
     destroy() {
@@ -26,6 +28,8 @@ class Grid {
         this.animationProgress = 0;
         this.animationStart = { row: null, col: null };
         this.animationEnd = { row: null, col: null };
+        this.matchesToRemove = [];
+        this.isRemovingMatches = false;
     }
 
     initializeGrid() {
@@ -54,7 +58,7 @@ class Grid {
     }
 
     startSwapAnimation(row1, col1, row2, col2) {
-        if (this.isAnimating) {
+        if (this.isAnimating || this.isRemovingMatches) {
             return;
         }
 
@@ -137,12 +141,61 @@ class Grid {
     }
 
     removeMatches(matches) {
-        matches.forEach(match => {
+        if (this.isRemovingMatches) return;
+
+        this.matchesToRemove = matches;
+        this.matchesToRemove.forEach(match => {
             match.forEach(tile => {
-                this.grid[tile.row][tile.col].destroy();
+                this.grid[tile.row][tile.col].isMatched = true;
             });
         });
+        this.isRemovingMatches = true;
+        this.animateMatchRemoval();
     }
+
+   animateMatchRemoval() {
+        const animationStep = 0.02;
+
+        if (this.matchesToRemove.length === 0) {
+            this.isRemovingMatches = false;
+            this.shiftTilesDown();
+            this.fillEmptyTiles();
+            draw();
+            return;
+        }
+
+        let allTilesFaded = true;
+
+        this.matchesToRemove.forEach(match => {
+            match.forEach(tile => {
+                if (this.grid[tile.row][tile.col].alpha > 0) {
+                    this.grid[tile.row][tile.col].alpha -= animationStep;
+                    allTilesFaded = false;
+                } else { 
+                   this.grid[tile.row][tile.col].alpha = 0;
+                }
+            });
+        });
+
+        if (!allTilesFaded) {
+            console.log("Animating match removal");
+            requestAnimationFrame(() => this.animateMatchRemoval());
+            draw();
+        } else {
+            console.log("Match removal animation complete");
+            this.matchesToRemove.forEach(match => {
+                match.forEach(tile => {
+                    this.grid[tile.row][tile.col].destroy();
+                });
+            });
+            this.matchesToRemove = [];
+            this.isRemovingMatches = false;
+            this.shiftTilesDown();
+            this.fillEmptyTiles();
+            draw();
+        }
+    }
+
 
     shiftTilesDown() {
         for (let col = 0; col < this.gridWidth; col++) {
@@ -165,19 +218,21 @@ class Grid {
             for (let col = 0; col < this.gridWidth; col++) {
                 if (!this.grid[row][col] || this.grid[row][col].type === null) {
                     this.grid[row][col] = this.createRandomTile(row, col);
+                    this.grid[row][col].alpha = 1; // Reset alpha for new tiles
                 }
             }
         }
     }
 
     handleMatches() {
+       if (this.isAnimating || this.isRemovingMatches) return; // Add this line
+
         let matches;
         do {
             matches = this.findMatches();
             if (matches.length > 0) {
                 this.removeMatches(matches);
-                this.shiftTilesDown();
-                this.fillEmptyTiles();
+                return;
             }
         } while (matches.length > 0);
     }
@@ -236,7 +291,13 @@ class Grid {
                         }
                     }
 
+                     // Set alpha for fading effect
+                    ctx.globalAlpha = tile.alpha;
+
                     ctx.drawImage(tileImage, x, y, width, height);
+
+                    // Reset alpha to 1 for other drawings
+                    ctx.globalAlpha = 1;
                 }
             }
         }
@@ -329,7 +390,7 @@ window.onload = function() {
     });
 
     function handleTileClick(row, col) {
-        if (gridObj.isAnimating) return;
+        if (gridObj.isAnimating || gridObj.isRemovingMatches) return;
 
         if (selectedTile === null) {
             selectedTile = { row: row, col: col };
