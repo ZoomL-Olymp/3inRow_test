@@ -15,6 +15,8 @@ class Tile {
         this.isMatched = false;
         this.alpha = 1; // Opacity, used for fade-out animation
         this.yOffset = 0; // For the drop animation, how far the tile is from its intended spot
+        this.shakeOffset = { x: 0, y: 0 }; // Offset for shake animation
+        this.isShaking = false;
     }
 
     /**
@@ -25,6 +27,8 @@ class Tile {
         this.alpha = 1; // Reset alpha for new tiles
         this.yOffset = 0; // Reset yOffset
         this.isMatched = false;
+        this.shakeOffset = { x: 0, y: 0 }; //Reset shake offset
+        this.isShaking = false;
         console.log("info: tile destroyed");
     }
 }
@@ -53,6 +57,7 @@ class Grid {
         this.matchesToRemove = []; // Array to store matches found for removal
         this.isRemovingMatches = false; // Flag to prevent match removal logic from interfering with other processes.
         this.isFilling = false; // Flag to track fill animation state
+        this.shakeInvalidSwap = false;
     }
 
     /**
@@ -103,6 +108,8 @@ class Grid {
         // Check if the swap will create a match
         if (!this.isSwapValid(row1, col1, row2, col2)) {
             console.log("info: swap does not create a match");
+            this.shakeInvalidSwap = {row1, col1, row2, col2};
+            this.startShakeAnimation(row1, col1, row2, col2);
             return;
         }
 
@@ -176,7 +183,63 @@ class Grid {
         return verticalMatch >= 3;
     }
 
+    /**
+     * Starts the shake animation for an invalid swap.
+     * @param {number} row1 The row of the first tile.
+     * @param {number} col1 The column of the first tile.
+     * @param {number} row2 The row of the second tile.
+     * @param {number} col2 The column of the second tile.
+     */
+    startShakeAnimation(row1, col1, row2, col2) {
+        if (this.isAnimating || this.isRemovingMatches || this.isFilling) {
+            console.log("info: a process is already in motion.");
+            return;
+        }
 
+        const tile1 = this.grid[row1][col1];
+        const tile2 = this.grid[row2][col2];
+
+        if (!tile1 || !tile2) return;
+
+        tile1.isShaking = true;
+        tile2.isShaking = true;
+
+        this.animateShake(row1, col1, row2, col2);
+    }
+
+    /**
+     * Animates the shaking of the tiles for an invalid swap.
+     */
+    animateShake(row1, col1, row2, col2) {
+        const shakeIntensity = 5;
+        const shakeDuration = 0.2; // seconds
+        const startTime = performance.now();
+        const tile1 = this.grid[row1][col1];
+        const tile2 = this.grid[row2][col2];
+        const animate = (currentTime) => {
+            const elapsedTime = currentTime - startTime;
+            if (elapsedTime < shakeDuration * 1000) {
+                const progress = elapsedTime / (shakeDuration * 1000);
+                const shakeAmountX = Math.sin(progress * Math.PI * 5) * shakeIntensity;
+                const shakeAmountY = Math.cos(progress * Math.PI * 5) * shakeIntensity;
+
+                tile1.shakeOffset = { x: shakeAmountX, y: shakeAmountY };
+                tile2.shakeOffset = { x: -shakeAmountX, y: -shakeAmountY }; // Opposite direction
+
+                requestAnimationFrame(animate);
+                draw();
+            } else {
+                tile1.shakeOffset = { x: 0, y: 0 };
+                tile2.shakeOffset = { x: 0, y: 0 };
+                tile1.isShaking = false;
+                tile2.isShaking = false;
+                this.shakeInvalidSwap = null;
+                draw();
+            }
+        };
+
+        requestAnimationFrame(animate);
+    }
 
     /**
      * Starts the swap animation between two tiles.
@@ -481,6 +544,14 @@ class Grid {
                     let y = row * (tileSize + padding) + tile.yOffset;  // Apply yOffset here
                     let width = tileSize;
                     let height = tileSize;
+                    let shakeX = 0;
+                    let shakeY = 0;
+
+
+                    if (tile.isShaking) {
+                        shakeX = tile.shakeOffset.x;
+                        shakeY = tile.shakeOffset.y;
+                    }
 
                     if (isSelected) {
                         width *= selectedScale;
@@ -502,7 +573,7 @@ class Grid {
                             const animatedX = x + distanceX * this.animationProgress;
                             const animatedY = y + distanceY * this.animationProgress;
 
-                            ctx.drawImage(tileImage, animatedX, animatedY, width, height);
+                            ctx.drawImage(tileImage, animatedX + shakeX, animatedY + shakeY, width, height);
                             continue;
                         }
 
@@ -513,7 +584,7 @@ class Grid {
                             const animatedX = x + distanceX * this.animationProgress;
                             const animatedY = y + distanceY * this.animationProgress;
 
-                            ctx.drawImage(tileImage, animatedX, animatedY, width, height);
+                            ctx.drawImage(tileImage, animatedX + shakeX, animatedY + shakeY, width, height);
                             continue;
                         }
                     }
@@ -521,7 +592,7 @@ class Grid {
                     // Set alpha for fading effect
                     ctx.globalAlpha = tile.alpha;
 
-                    ctx.drawImage(tileImage, x, y, width, height);
+                    ctx.drawImage(tileImage, x + shakeX, y + shakeY, width, height);
 
                     // Reset alpha to 1 for other drawings
                     ctx.globalAlpha = 1;
