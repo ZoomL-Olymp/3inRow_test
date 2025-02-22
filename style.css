@@ -1,0 +1,48 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0; /* Light gray background */
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.game-container {
+    position: relative; /* Needed for absolute positioning of UI elements */
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center items horizontally */
+}
+
+#gameCanvas {
+    background-color: transparent; /* Transparent background for the canvas */
+    border: 1px solid #ccc;
+    display: block; /* Removes any default inline spacing */
+    margin: 0 auto;   /* Centers the canvas horizontally */
+}
+
+.ui-container {
+    display: flex;
+    justify-content: space-around; /* Evenly space buttons */
+    width: 100%; /* Match canvas width */
+    margin-top: 10px; /* Add some space between canvas and buttons */
+}
+
+.ui-container button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #4CAF50; /* Green */
+    border: none;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    border-radius: 5px;
+}
+
+.ui-container button:hover {
+    background-color: #3e8e41;
+}

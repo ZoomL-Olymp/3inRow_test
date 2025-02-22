@@ -603,11 +603,26 @@ class Grid {
 }
 
 /**
- * Clears the canvas and redraws the grid.
+ * Clears the canvas and redraws the grid, centering the grid.
  */
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Calculate the starting x and y positions to center the grid
+    const gridWidthPixels = gridObj.gridWidth * (tileSize + padding) - padding;
+    const gridHeightPixels = gridObj.gridHeight * (tileSize + padding) - padding;
+
+    const startX = (canvas.width - gridWidthPixels) / 2;
+    const startY = (canvas.height - gridHeightPixels) / 2;
+
+    ctx.save(); // Save the current state to prevent translation affecting other drawings
+
+    ctx.translate(startX, startY); // Move the origin to center the grid
+
     gridObj.draw(ctx, assets, tileSize, padding, selectedScale);
+
+    ctx.restore(); // Restore the state to clear the translation
+
 }
 
 window.onload = function() {
