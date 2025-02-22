@@ -99,8 +99,84 @@ class Grid {
             console.log("info: tiles are not adjacent");
             return;
         }
+
+        // Check if the swap will create a match
+        if (!this.isSwapValid(row1, col1, row2, col2)) {
+            console.log("info: swap does not create a match");
+            return;
+        }
+
         this.startSwapAnimation(row1, col1, row2, col2);
     }
+
+    /**
+     * Checks if the swap will result in a match.
+     * @param {number} row1 The row of the first tile.
+     * @param {number} col1 The column of the first tile.
+     * @param {number} row2 The row of the second tile.
+     * @param {number} col2 The column of the second tile.
+     * @returns {boolean} True if the swap is valid (creates a match), false otherwise.
+     */
+    isSwapValid(row1, col1, row2, col2) {
+        // Temporarily swap the tiles
+        const temp = this.grid[row1][col1];
+        this.grid[row1][col1] = this.grid[row2][col2];
+        this.grid[row2][col2] = temp;
+
+        // Check for matches around both swapped tiles
+        const match1 = this.hasMatchAt(row1, col1);
+        const match2 = this.hasMatchAt(row2, col2);
+
+        // Swap the tiles back to their original positions
+        const temp2 = this.grid[row1][col1];
+        this.grid[row1][col1] = this.grid[row2][col2];
+        this.grid[row2][col2] = temp2;
+
+        return match1 || match2;
+    }
+
+    /**
+     * Checks if there is a match at the given tile.
+     * @param {number} row The row of the tile.
+     * @param {number} col The column of the tile.
+     * @returns {boolean} True if there is a match, false otherwise.
+     */
+    hasMatchAt(row, col) {
+        const tile = this.grid[row][col];
+        if (!tile) return false;
+
+        const type = tile.type;
+
+        // Check horizontal matches
+        let horizontalMatch = 1;
+        let i = col - 1;
+        while (i >= 0 && this.grid[row][i] && this.grid[row][i].type === type) {
+            horizontalMatch++;
+            i--;
+        }
+        i = col + 1;
+        while (i < this.gridWidth && this.grid[row][i] && this.grid[row][i].type === type) {
+            horizontalMatch++;
+            i++;
+        }
+        if (horizontalMatch >= 3) return true;
+
+        // Check vertical matches
+        let verticalMatch = 1;
+        i = row - 1;
+        while (i >= 0 && this.grid[i][col] && this.grid[i][col].type === type) {
+            verticalMatch++;
+            i--;
+        }
+        i = row + 1;
+        while (i < this.gridHeight && this.grid[i][col] && this.grid[i][col].type === type) {
+            verticalMatch++;
+            i++;
+        }
+        return verticalMatch >= 3;
+    }
+
+
 
     /**
      * Starts the swap animation between two tiles.
@@ -193,6 +269,8 @@ class Grid {
                         { row: row, col: col + 1 },
                         { row: row, col: col + 2 }
                     ]);
+                     col+=2;
+                     continue;
                 }
             }
         }
@@ -210,6 +288,8 @@ class Grid {
                         { row: row + 1, col: col },
                         { row: row + 2, col: col }
                     ]);
+                    row+=2;
+                    continue;
                 }
             }
         }
