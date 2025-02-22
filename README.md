@@ -4,7 +4,7 @@
 
 This is a simple Match 3 game implemented using HTML, CSS, and JavaScript.  The goal of the game is to swap adjacent tiles to create horizontal or vertical matches of three or more tiles of the same type.  Matched tiles are removed, and new tiles fall from the top to fill the empty spaces.
 
-[game_screenshot.png]
+![Game example](assets/game_screenshot.png)
 
 ## Features
 
