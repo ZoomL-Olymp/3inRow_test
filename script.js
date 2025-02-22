@@ -1,3 +1,5 @@
+let canvas, ctx, assets, gridObj, tileSize, padding, selectedScale; // global variables
+
 class Tile {
     constructor(type, color) {
         this.type = type;
@@ -7,7 +9,7 @@ class Tile {
     }
 
     destroy() {
-        this.type = null; // Set the tile type to null
+        this.type = null;
         console.log("info: tile destroyed");
     }
 }
@@ -20,58 +22,26 @@ class Grid {
         this.tileColors = tileColors;
         this.grid = [];
         this.initializeGrid();
+        this.isAnimating = false;
+        this.animationProgress = 0;
+        this.animationStart = { row: null, col: null };
+        this.animationEnd = { row: null, col: null };
     }
 
     initializeGrid() {
+        this.grid = [];
         for (let row = 0; row < this.gridHeight; row++) {
             this.grid[row] = [];
             for (let col = 0; col < this.gridWidth; col++) {
-                this.grid[row][col] = this.createRandomTile();
+                this.grid[row][col] = this.createRandomTile(row, col);
             }
         }
     }
 
     createRandomTile(row, col) {
         const tileType = this.tileTypes[Math.floor(Math.random() * this.tileTypes.length)];
-        let tileColor = new String;
-        if ((col + row) % 2 == 0) {
-            tileColor = "dark";
-        } else {
-            tileColor = "light";
-        }
+        let tileColor = ((col + row) % 2 == 0) ? "dark" : "light";
         return new Tile(tileType, tileColor);
-    }
-
-    draw(ctx, assets, tileSize, padding, selectedScale) {
-        for (let row = 0; row < this.gridHeight; row++) {
-            for (let col = 0; col < this.gridWidth; col++) {
-                const tile = this.grid[row][col];
-
-                // Проверяем, что тайл не пустой
-                if (tile && tile.type) {
-                    const tileType = tile.type;
-                    const tileColor = tile.color;
-                    const isSelected = tile.isSelected;
-
-                    const tileImageKey = `tile_${tileColor}_${tileType.toLowerCase()}`;
-                    const tileImage = assets[tileImageKey];
-
-                    let x = col * (tileSize + padding);
-                    let y = row * (tileSize + padding);
-                    let width = tileSize;
-                    let height = tileSize;
-
-                    if (isSelected) {
-                        width *= selectedScale;
-                        height *= selectedScale;
-                        x -= (width - tileSize) / 2;
-                        y -= (height - tileSize) / 2; // Center the tile
-                    }
-
-                    ctx.drawImage(tileImage, x, y, width, height);
-                }
-            }
-        }
     }
 
     attemptSwap(row1, col1, row2, col2) {
@@ -80,9 +50,42 @@ class Grid {
             console.log("info: tiles are not adjacent");
             return;
         }
+        this.startSwapAnimation(row1, col1, row2, col2);
+    }
 
-        this.swapTiles(row1, col1, row2, col2);
-        this.handleMatches(); // Check for matches
+    startSwapAnimation(row1, col1, row2, col2) {
+        if (this.isAnimating) {
+            return;
+        }
+
+        this.isAnimating = true;
+        this.animationProgress = 0;
+        this.animationStart = { row: row1, col: col1 };
+        this.animationEnd = { row: row2, col: col2 };
+
+        this.animateSwap();
+    }
+
+    animateSwap() {
+        const animationDuration = 0.2;
+        const animationStep = 0.02;
+
+        this.animationProgress += animationStep;
+
+        if (this.animationProgress < 1) {
+            requestAnimationFrame(() => this.animateSwap());
+        } else {
+            this.swapTiles(this.animationStart.row, this.animationStart.col, this.animationEnd.row, this.animationEnd.col);
+            this.isAnimating = false;
+            this.animationProgress = 0;
+            this.animationStart = { row: null, col: null };
+            this.animationEnd = { row: null, col: null };
+            this.handleMatches();
+            draw();
+            return;
+        }
+
+        draw();
     }
 
     swapTiles(row1, col1, row2, col2) {
@@ -98,7 +101,6 @@ class Grid {
     findMatches() {
         const matches = [];
 
-        // Horizontal check
         for (let row = 0; row < this.gridHeight; row++) {
             for (let col = 0; col < this.gridWidth - 2; col++) {
                 const tile1 = this.grid[row][col];
@@ -115,7 +117,6 @@ class Grid {
             }
         }
 
-        // Vertical check
         for (let col = 0; col < this.gridWidth; col++) {
             for (let row = 0; row < this.gridHeight - 2; row++) {
                 const tile1 = this.grid[row][col];
@@ -147,7 +148,7 @@ class Grid {
         for (let col = 0; col < this.gridWidth; col++) {
             let emptyRows = [];
             for (let row = this.gridHeight - 1; row >= 0; row--) {
-                if (!this.grid[row][col] || this.grid[row][col].type === null) { // Check for a null tile
+                if (!this.grid[row][col] || this.grid[row][col].type === null) {
                     emptyRows.push(row);
                 } else if (emptyRows.length > 0) {
                     const bottomEmptyRow = emptyRows.shift();
@@ -180,22 +181,86 @@ class Grid {
             }
         } while (matches.length > 0);
     }
+
+    draw(ctx, assets, tileSize, padding, selectedScale) {
+        for (let row = 0; row < this.gridHeight; row++) {
+            for (let col = 0; col < this.gridWidth; col++) {
+                const tile = this.grid[row][col];
+
+                if (tile && tile.type) {
+                    const tileType = tile.type;
+                    const tileColor = tile.color;
+                    const isSelected = tile.isSelected;
+
+                    const tileImageKey = `tile_${tileColor}_${tileType.toLowerCase()}`;
+                    const tileImage = assets[tileImageKey];
+
+                    let x = col * (tileSize + padding);
+                    let y = row * (tileSize + padding);
+                    let width = tileSize;
+                    let height = tileSize;
+
+                    if (isSelected) {
+                        width *= selectedScale;
+                        height *= selectedScale;
+                        x -= (width - tileSize) / 2;
+                        y -= (height - tileSize) / 2;
+                    }
+
+                    if (this.isAnimating) {
+                        const startRow = this.animationStart.row;
+                        const startCol = this.animationStart.col;
+                        const endRow = this.animationEnd.row;
+                        const endCol = this.animationEnd.col;
+
+                        if (row === startRow && col === startCol) {
+                            const distanceX = (endCol - startCol) * (tileSize + padding);
+                            const distanceY = (endRow - startRow) * (tileSize + padding);
+
+                            const animatedX = x + distanceX * this.animationProgress;
+                            const animatedY = y + distanceY * this.animationProgress;
+
+                            ctx.drawImage(tileImage, animatedX, animatedY, width, height);
+                            continue;
+                        }
+
+                        if (row === endRow && col === endCol) {
+                            const distanceX = (startCol - endCol) * (tileSize + padding);
+                            const distanceY = (startRow - endRow) * (tileSize + padding);
+
+                            const animatedX = x + distanceX * this.animationProgress;
+                            const animatedY = y + distanceY * this.animationProgress;
+
+                            ctx.drawImage(tileImage, animatedX, animatedY, width, height);
+                            continue;
+                        }
+                    }
+
+                    ctx.drawImage(tileImage, x, y, width, height);
+                }
+            }
+        }
+    }
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    gridObj.draw(ctx, assets, tileSize, padding, selectedScale);
 }
 
 window.onload = function() {
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
 
-    const assets = {};
-    let gridObj;
+    assets = {};
 
     const gridWidth = 4;
     const gridHeight = 5;
-    const tileSize = 90;
-    const padding = 5;
+    tileSize = 90;
+    padding = 5;
     const tileTypes = ["Strawberry", "Avocado", "Lemon"];
     const tileColors = 2;
-    const selectedScale = 1.1;
+    selectedScale = 1.1;
 
     function loadAssets(callback) {
         let imagesLoaded = 0;
@@ -244,15 +309,9 @@ window.onload = function() {
     loadAssets(function() {
         console.log("info: assets loaded");
         gridObj = new Grid(gridWidth, gridHeight, tileTypes, tileColors);
-        // Initial match handling
         gridObj.handleMatches();
         draw();
     });
-
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        gridObj.draw(ctx, assets, tileSize, padding, selectedScale);
-    }
 
     let selectedTile = null;
 
@@ -270,14 +329,14 @@ window.onload = function() {
     });
 
     function handleTileClick(row, col) {
+        if (gridObj.isAnimating) return;
+
         if (selectedTile === null) {
-            // First tile selected
             selectedTile = { row: row, col: col };
             gridObj.setSelected(row, col, true);
             console.log(`info: first tile selected at ${row}, ${col}`);
             draw();
         } else {
-            // Second tile selected - attempt to swap
             const firstTile = selectedTile;
             gridObj.setSelected(firstTile.row, firstTile.col, false);
             selectedTile = null;
