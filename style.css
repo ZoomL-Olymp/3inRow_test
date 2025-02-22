@@ -7,9 +7,10 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background-image: url('assets/fon.png'); /* Add background image */
-    background-size: cover; /* Cover the entire screen */
+    background-image: url('assets/fon.png');
+    background-size: contain;
     background-repeat: no-repeat;
+    background-position: center;
 }
 
 .game-container {
@@ -21,7 +22,7 @@ body {
 
 #gameCanvas {
     background-color: transparent;
-    border: 1px solid #ccc;
+    border: none;
     display: block;
     margin: 0 auto;
 }
