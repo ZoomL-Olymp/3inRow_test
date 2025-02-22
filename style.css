@@ -20,30 +20,64 @@ body {
     align-items: center;
 }
 
+/* Header Container (Status Image and Progress Bar) */
+.header-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+#statusImage {
+    width: 250px;  /* Adjust size as needed */
+    height: auto;
+    margin-bottom: 5px;
+}
+
+.progress-bar-container {
+    width: 60%;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: auto;
+}
+
+#progressBar {
+  width: 100%;  /*Initial width for progress.  This will be adjusted in JS*/
+  height: auto;
+  /*max-width: 100%;*/ /*Optional: Ensure image doesn't overflow container */
+  object-fit: contain; /* Prevents progress.png stretching.  See explanation below */
+  object-position: left; /*Align to the left to allow showing partial progress*/
+}
+
+/* Mascot Container */
 .mascot-container {
-    position: absolute; /* Important for positioning relative to .game-container */
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: auto;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start; /* Align items to the top */
-    pointer-events: none; /* Allows clicks to pass through to canvas */
+    align-items: flex-start;
+    pointer-events: none;
+    padding-top: 35px; /* Add padding to push content down */
 }
 
 .mascot-container img {
     width: auto;
-    height: 140px; /* Adjust size as needed */
-    margin: 0px; /* Add some spacing */
+    height: 100px;
+    margin: 5px;
 }
 
-#mascotLeft {
-    /* Specific styling for the left mascot (if needed) */
-}
-
-#mascotRight {
-    /* Specific styling for the right mascot (if needed) */
+/* Ensure levelCounter is centered vertically with mascots */
+#levelCounter {
+    height: fit-content; /* Match mascot height */
+    width: fit-content;    /* Maintain aspect ratio */
+    margin-top: 15%; /* Vertically align to bottom */
+    margin-bottom: auto;
 }
 
 #gameCanvas {
@@ -51,7 +85,7 @@ body {
     border: none;
     display: block;
     margin: 0 auto;
-    z-index: 1; /* Ensure canvas is above the mascot container in stacking order */
+    z-index: 1;
 }
 
 .ui-container {

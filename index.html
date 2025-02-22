@@ -7,11 +7,20 @@
 </head>
 <body>
     <div class="game-container">
-        <div class="mascot-container">
-            <img id="mascotLeft" src="assets/mascot01.png" alt="Mascot Left">
-            <img id="mascotRight" src="assets/mascot2.png" alt="Mascot Right">
+        <div class="header-container">
+            <img id="statusImage" src="assets/status.png" alt="Status">
+            <div class="progress-bar-container">
+                <img id="progressBar" src="assets/progress.png" alt="Progress">
+            </div>
         </div>
-        <canvas id="gameCanvas" width="480" height="640"></canvas>
+
+        <div class="mascot-container">
+            <img id="mascotLeft" src="assets/mascot_left.png" alt="Mascot Left">
+            <img id="levelCounter" src="assets/level.png" alt="Level: 1">
+            <img id="mascotRight" src="assets/mascot_right.png" alt="Mascot Right">
+        </div>
+
+        <canvas id="gameCanvas" width="400" height="550"></canvas>
 
         <div class="ui-container">
             <button id="settingsButton" aria-label="Settings"></button>
