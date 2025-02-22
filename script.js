@@ -707,8 +707,18 @@ window.onload = function() {
      */
     canvas.addEventListener('mousedown', function(event) {
         const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
+        let x = event.clientX - rect.left;
+        let y = event.clientY - rect.top;
+
+        // Adjust the x and y coordinates to account for the grid's centering translation
+        const gridWidthPixels = gridObj.gridWidth * (tileSize + padding) - padding;
+        const gridHeightPixels = gridObj.gridHeight * (tileSize + padding) - padding;
+
+        const startX = (canvas.width - gridWidthPixels) / 2;
+        const startY = (canvas.height - gridHeightPixels) / 2;
+
+        x -= startX;
+        y -= startY;
 
         const col = Math.floor(x / (tileSize + padding));
         const row = Math.floor(y / (tileSize + padding));
