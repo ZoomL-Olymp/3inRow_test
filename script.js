@@ -1,42 +1,65 @@
 let canvas, ctx, assets, gridObj, tileSize, padding, selectedScale; // global variables
 
+/**
+ * Represents a single tile in the game grid.
+ */
 class Tile {
+    /**
+     * @param {string} type The type of the tile (e.g., "Strawberry", "Avocado").
+     * @param {string} color The color of the tile (e.g., "dark", "light").
+     */
     constructor(type, color) {
         this.type = type;
         this.color = color;
-        this.isLocked = false;
         this.isSelected = false;
         this.isMatched = false;
-        this.alpha = 1;
-        this.yOffset = 0; // For the drop animation
+        this.alpha = 1; // Opacity, used for fade-out animation
+        this.yOffset = 0; // For the drop animation, how far the tile is from its intended spot
     }
 
+    /**
+     * Resets the tile's properties when it's destroyed or removed.
+     */
     destroy() {
-        this.type = null;
+        this.type = null; // Set type to null, effectively destroying the tile
         this.alpha = 1; // Reset alpha for new tiles
         this.yOffset = 0; // Reset yOffset
+        this.isMatched = false;
         console.log("info: tile destroyed");
     }
 }
 
+/**
+ * Represents the game grid and its logic.
+ */
 class Grid {
+    /**
+     * @param {number} gridWidth The width of the grid in tiles.
+     * @param {number} gridHeight The height of the grid in tiles.
+     * @param {string[]} tileTypes An array of possible tile types.
+     * @param {number} tileColors Number of tile colors. In reality a boolean would be better.
+     */
     constructor(gridWidth, gridHeight, tileTypes, tileColors) {
         this.gridWidth = gridWidth;
         this.gridHeight = gridHeight;
         this.tileTypes = tileTypes;
         this.tileColors = tileColors;
-        this.grid = [];
+        this.grid = []; // 2D array representing the grid of tiles
         this.initializeGrid();
-        this.isAnimating = false;
-        this.animationProgress = 0;
-        this.animationStart = { row: null, col: null };
-        this.animationEnd = { row: null, col: null };
-        this.matchesToRemove = [];
-        this.isRemovingMatches = false;
+        this.isAnimating = false; // Flag to prevent multiple animations running simultaneously
+        this.animationProgress = 0; // Progress of the swap animation (0 to 1)
+        this.animationStart = { row: null, col: null }; // Starting position of the swap animation
+        this.animationEnd = { row: null, col: null }; // Ending position of the swap animation
+        this.matchesToRemove = []; // Array to store matches found for removal
+        this.isRemovingMatches = false; // Flag to prevent match removal logic from interfering with other processes.
         this.isFilling = false; // Flag to track fill animation state
     }
 
+    /**
+     * Initializes the grid with random tiles.
+     */
     initializeGrid() {
+        console.log("info: initializing grid");
         this.grid = [];
         for (let row = 0; row < this.gridHeight; row++) {
             this.grid[row] = [];
@@ -44,11 +67,18 @@ class Grid {
                 this.grid[row][col] = this.createRandomTile(row, col);
             }
         }
+        console.log("info: grid initialized");
     }
 
+    /**
+     * Creates a random tile for the given row and column.
+     * @param {number} row The row of the tile.
+     * @param {number} col The column of the tile.
+     * @returns {Tile} The newly created tile.
+     */
     createRandomTile(row, col) {
         const tileType = this.tileTypes[Math.floor(Math.random() * this.tileTypes.length)];
-        let tileColor = ((col + row) % 2 == 0) ? "dark" : "light";
+        let tileColor = ((col + row) % 2 == 0) ? "dark" : "light"; // alternating tile colors
         const tile = new Tile(tileType, tileColor);
 
         // Initial vertical offset for drop animation
@@ -56,6 +86,13 @@ class Grid {
         return tile;
     }
 
+    /**
+     * Attempts to swap two adjacent tiles.
+     * @param {number} row1 The row of the first tile.
+     * @param {number} col1 The column of the first tile.
+     * @param {number} row2 The row of the second tile.
+     * @param {number} col2 The column of the second tile.
+     */
     attemptSwap(row1, col1, row2, col2) {
         console.log(`info: attempting swap of ${row1}, ${col1} with ${row2}, ${col2}`);
         if (Math.abs(row1 - row2) + Math.abs(col1 - col2) !== 1) {
@@ -65,8 +102,16 @@ class Grid {
         this.startSwapAnimation(row1, col1, row2, col2);
     }
 
+    /**
+     * Starts the swap animation between two tiles.
+     * @param {number} row1 The row of the first tile.
+     * @param {number} col1 The column of the first tile.
+     * @param {number} row2 The row of the second tile.
+     * @param {number} col2 The column of the second tile.
+     */
     startSwapAnimation(row1, col1, row2, col2) {
         if (this.isAnimating || this.isRemovingMatches || this.isFilling) {
+            console.log("info: a process is already in motion.");
             return;
         }
 
@@ -78,8 +123,11 @@ class Grid {
         this.animateSwap();
     }
 
+    /**
+     * Animates the swap between two tiles.
+     */
     animateSwap() {
-        const animationDuration = 0.2;
+        const animationDuration = 0.2; // Not actually used
         const animationStep = 0.02;
 
         this.animationProgress += animationStep;
@@ -100,19 +148,39 @@ class Grid {
         draw();
     }
 
+    /**
+     * Swaps two tiles in the grid.
+     * @param {number} row1 The row of the first tile.
+     * @param {number} col1 The column of the first tile.
+     * @param {number} row2 The row of the second tile.
+     * @param {number} col2 The column of the second tile.
+     */
     swapTiles(row1, col1, row2, col2) {
+        console.log(`info: swapping tiles at ${row1}, ${col1} and ${row2}, ${col2}`);
         const temp = this.grid[row1][col1];
         this.grid[row1][col1] = this.grid[row2][col2];
         this.grid[row2][col2] = temp;
+        console.log(`info: tiles swapped`);
     }
 
+    /**
+     * Sets the selected state of a tile.
+     * @param {number} row The row of the tile.
+     * @param {number} col The column of the tile.
+     * @param {boolean} isSelected Whether the tile is selected.
+     */
     setSelected(row, col, isSelected) {
         this.grid[row][col].isSelected = isSelected;
     }
 
+    /**
+     * Finds all matches of three or more tiles of the same type.
+     * @returns {Array<Array<{row: number, col: number}>>} An array of matches, where each match is an array of tile coordinates.
+     */
     findMatches() {
         const matches = [];
 
+        // Check for horizontal matches
         for (let row = 0; row < this.gridHeight; row++) {
             for (let col = 0; col < this.gridWidth - 2; col++) {
                 const tile1 = this.grid[row][col];
@@ -129,6 +197,7 @@ class Grid {
             }
         }
 
+        // Check for vertical matches
         for (let col = 0; col < this.gridWidth; col++) {
             for (let row = 0; row < this.gridHeight - 2; row++) {
                 const tile1 = this.grid[row][col];
@@ -145,9 +214,14 @@ class Grid {
             }
         }
 
+        console.log(`info: found ${matches.length} matches`);
         return matches;
     }
 
+    /**
+     * Removes the given matches from the grid.
+     * @param {Array<Array<{row: number, col: number}>>} matches An array of matches to remove.
+     */
     removeMatches(matches) {
         if (this.isRemovingMatches || this.isAnimating || this.isFilling) return;
 
@@ -161,6 +235,9 @@ class Grid {
         this.animateMatchRemoval();
     }
 
+    /**
+     * Animates the removal of matched tiles by fading them out.
+     */
     animateMatchRemoval() {
         const animationStep = 0.02;
 
@@ -188,11 +265,11 @@ class Grid {
         });
 
         if (!allTilesFaded) {
-            console.log("Animating match removal");
+            console.log("info: animating match removal");
             requestAnimationFrame(() => this.animateMatchRemoval());
             draw();
         } else {
-            console.log("Match removal animation complete");
+            console.log("info: match removal animation complete");
             this.matchesToRemove.forEach(match => {
                 match.forEach(tile => {
                     if (this.grid[tile.row][tile.col]) {
@@ -210,7 +287,11 @@ class Grid {
     }
 
 
+    /**
+     * Shifts tiles down to fill any empty spaces created by removed matches.
+     */
     shiftTilesDown() {
+        console.log("info: shifting tiles down");
         for (let col = 0; col < this.gridWidth; col++) {
             let emptyRows = [];
             for (let row = this.gridHeight - 1; row >= 0; row--) {
@@ -224,11 +305,16 @@ class Grid {
                 }
             }
         }
+        console.log("info: tiles shifted");
     }
 
-     fillEmptyTiles() {
+     /**
+     * Fills empty tiles in the grid with new random tiles, initiating the drop animation.
+     */
+    fillEmptyTiles() {
         if (this.isFilling || this.isAnimating || this.isRemovingMatches) return;
         this.isFilling = true;
+        console.log("info: filling empty tiles");
 
         // Create the new tiles with their initial yOffset values
         for (let row = 0; row < this.gridHeight; row++) {
@@ -242,6 +328,9 @@ class Grid {
         this.animateTileDrop();
     }
 
+    /**
+     * Animates the dropping of new tiles into the grid.
+     */
     animateTileDrop() {
         let allTilesLanded = true;
         const dropSpeed = 10; // Adjust this value to control the drop speed
@@ -267,9 +356,13 @@ class Grid {
             this.isFilling = false;
             this.handleMatches();
             draw();
+            console.log("info: tiles filled");
         }
     }
 
+    /**
+     * Handles the process of finding and removing matches in the grid.  Loops until no more matches are found.
+     */
     handleMatches() {
         if (this.isAnimating || this.isRemovingMatches || this.isFilling) return; // Add this line
 
@@ -283,6 +376,14 @@ class Grid {
         } while (matches.length > 0);
     }
 
+    /**
+     * Draws the grid and its tiles on the canvas.
+     * @param {CanvasRenderingContext2D} ctx The 2D rendering context of the canvas.
+     * @param {Object<string, HTMLImageElement>} assets An object containing the loaded image assets.
+     * @param {number} tileSize The size of each tile.
+     * @param {number} padding The padding between tiles.
+     * @param {number} selectedScale The scale factor for selected tiles.
+     */
     draw(ctx, assets, tileSize, padding, selectedScale) {
         for (let row = 0; row < this.gridHeight; row++) {
             for (let col = 0; col < this.gridWidth; col++) {
@@ -350,6 +451,9 @@ class Grid {
     }
 }
 
+/**
+ * Clears the canvas and redraws the grid.
+ */
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     gridObj.draw(ctx, assets, tileSize, padding, selectedScale);
@@ -369,10 +473,17 @@ window.onload = function() {
     const tileColors = 2;
     selectedScale = 1.1;
 
+    /**
+     * Loads the image assets for the game.
+     * @param {function} callback A function to call when all assets are loaded.
+     */
     function loadAssets(callback) {
         let imagesLoaded = 0;
         const totalImages = tileTypes.length * tileColors + tileColors;
 
+        /**
+         * Called when an image has loaded.  Checks if all images are loaded.
+         */
         function imageLoaded() {
             imagesLoaded++;
             if (imagesLoaded === totalImages) {
@@ -380,6 +491,7 @@ window.onload = function() {
             }
         }
 
+        // Load all tile images
         assets.tile_dark = new Image();
         assets.tile_dark.src = 'assets/tile_dark.png';
         assets.tile_dark.onload = imageLoaded;
@@ -413,6 +525,7 @@ window.onload = function() {
         assets.tile_light_lemon.onload = imageLoaded;
     }
 
+    // Load assets and then start the game
     loadAssets(function() {
         console.log("info: assets loaded");
         gridObj = new Grid(gridWidth, gridHeight, tileTypes, tileColors);
@@ -422,6 +535,10 @@ window.onload = function() {
 
     let selectedTile = null;
 
+    /**
+     * Handles the click event on the canvas.
+     * @param {MouseEvent} event The mouse event.
+     */
     canvas.addEventListener('mousedown', function(event) {
         const rect = canvas.getBoundingClientRect();
         const x = event.clientX - rect.left;
@@ -435,6 +552,11 @@ window.onload = function() {
         }
     });
 
+    /**
+     * Handles a click on a tile.
+     * @param {number} row The row of the clicked tile.
+     * @param {number} col The column of the clicked tile.
+     */
     function handleTileClick(row, col) {
         if (gridObj.isAnimating || gridObj.isRemovingMatches || gridObj.isFilling) return;
 
