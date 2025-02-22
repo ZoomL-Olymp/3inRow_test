@@ -1,8 +1,9 @@
 class Tile {
     constructor(type, color) {
-        this.type = type; // "Strawberry", "Avocado", "Lemon"
+        this.type = type;
         this.color = color;
         this.isLocked = false;
+        this.isSelected = false;
     }
 
     destroy() {
@@ -14,8 +15,8 @@ class Grid {
     constructor(gridWidth, gridHeight, tileTypes, tileColors) {
         this.gridWidth = gridWidth;
         this.gridHeight = gridHeight;
-        this.tileTypes = tileTypes; // Array of tile type names (e.g., ["Strawberry", "Avocado", "Lemon"])
-        this.tileColor = tileColors // Number of different tile colors
+        this.tileTypes = tileTypes;
+        this.tileColor = tileColors;
         this.grid = [];
         this.initializeGrid();
     }
@@ -24,7 +25,6 @@ class Grid {
         for (let row = 0; row < this.gridHeight; row++) {
             this.grid[row] = [];
             for (let col = 0; col < this.gridWidth; col++) {
-                // Randomly select a tile type
                 const tileType = this.tileTypes[Math.floor(Math.random() * this.tileTypes.length)];
                 let tileColor = new String;
                 if ((col + row) % 2 == 0) {
@@ -37,48 +37,54 @@ class Grid {
         }
     }
 
-    draw(ctx, assets, tileSize, padding) {
+    draw(ctx, assets, tileSize, padding, selectedScale) {
         for (let row = 0; row < this.gridHeight; row++) {
             for (let col = 0; col < this.gridWidth; col++) {
                 const tile = this.grid[row][col];
                 const tileType = tile.type;
                 const tileColor = tile.color;
+                const isSelected = tile.isSelected;
 
                 const tileImageKey = `tile_${tileColor}_${tileType.toLowerCase()}`;
-                console.log(`info: drawing ${tileImageKey} at ${row}, ${col}`);
                 const tileImage = assets[tileImageKey];
 
-                const x = col * (tileSize + padding);
-                const y = row * (tileSize + padding);
+                let x = col * (tileSize + padding);
+                let y = row * (tileSize + padding);
+                let width = tileSize;
+                let height = tileSize;
 
-                ctx.drawImage(tileImage, x, y, tileSize, tileSize);
+                if (isSelected) {
+                    width *= selectedScale;
+                    height *= selectedScale;
+                    x -= (width - tileSize) / 2;
+                    y -= (height - tileSize) / 2; // Center the tile
+                }
+
+                ctx.drawImage(tileImage, x, y, width, height);
             }
         }
     }
 
     attemptSwap(row1, col1, row2, col2) {
         console.log(`info: attempting swap of ${row1}, ${col1} with ${row2}, ${col2}`);
-        // Check if the tiles are adjacent
         if (Math.abs(row1 - row2) + Math.abs(col1 - col2) !== 1) {
             console.log("info: tiles are not adjacent");
-            return; // Not adjacent
+            return;
         }
 
-        // Swap the tiles
         this.swapTiles(row1, col1, row2, col2);
-
-        // Check for matches (implement later)
-        // If no matches, swap back (implement later)
     }
 
     swapTiles(row1, col1, row2, col2) {
-        // Store the types of the tiles
         const type1 = this.grid[row1][col1].type;
         const type2 = this.grid[row2][col2].type;
 
-        // Swap the types
         this.grid[row1][col1].type = type2;
         this.grid[row2][col2].type = type1;
+    }
+
+    setSelected(row, col, isSelected) {
+        this.grid[row][col].isSelected = isSelected;
     }
 }
 
@@ -96,6 +102,7 @@ window.onload = function() {
     const padding = 5;
     const tileTypes = ["Strawberry", "Avocado", "Lemon"];
     const tileColors = 2;
+    const selectedScale = 1.1; // Масштаб увеличения при выделении
 
     function loadAssets(callback) {
         let imagesLoaded = 0;
@@ -148,8 +155,8 @@ window.onload = function() {
     });
 
     function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
-        gridObj.draw(ctx, assets, tileSize, padding); // Draw the grid
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        gridObj.draw(ctx, assets, tileSize, padding, selectedScale); // Передаем selectedScale в draw
     }
 
     let selectedTile = null;
@@ -171,16 +178,16 @@ window.onload = function() {
         if (selectedTile === null) {
             // First tile selected
             selectedTile = { row: row, col: col };
+            gridObj.setSelected(row, col, true); // Устанавливаем isSelected = true
             console.log(`info: first tile selected at ${row}, ${col}`);
             draw();
         } else {
             // Second tile selected - attempt to swap
             const firstTile = selectedTile;
-            selectedTile = null; // Reset selection
+            gridObj.setSelected(firstTile.row, firstTile.col, false); // Убираем выделение с первого тайла
+            selectedTile = null;
             gridObj.attemptSwap(firstTile.row, firstTile.col, row, col);
             draw();
         }
     }
-
-
 };
