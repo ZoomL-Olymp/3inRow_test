@@ -8,11 +8,13 @@ class Tile {
         this.isSelected = false;
         this.isMatched = false;
         this.alpha = 1;
+        this.yOffset = 0; // For the drop animation
     }
 
     destroy() {
         this.type = null;
         this.alpha = 1; // Reset alpha for new tiles
+        this.yOffset = 0; // Reset yOffset
         console.log("info: tile destroyed");
     }
 }
@@ -31,6 +33,7 @@ class Grid {
         this.animationEnd = { row: null, col: null };
         this.matchesToRemove = [];
         this.isRemovingMatches = false;
+        this.isFilling = false; // Flag to track fill animation state
     }
 
     initializeGrid() {
@@ -46,7 +49,11 @@ class Grid {
     createRandomTile(row, col) {
         const tileType = this.tileTypes[Math.floor(Math.random() * this.tileTypes.length)];
         let tileColor = ((col + row) % 2 == 0) ? "dark" : "light";
-        return new Tile(tileType, tileColor);
+        const tile = new Tile(tileType, tileColor);
+
+        // Initial vertical offset for drop animation
+        tile.yOffset = -(tileSize + padding) * (row + 1);
+        return tile;
     }
 
     attemptSwap(row1, col1, row2, col2) {
@@ -59,7 +66,7 @@ class Grid {
     }
 
     startSwapAnimation(row1, col1, row2, col2) {
-        if (this.isAnimating || this.isRemovingMatches) {
+        if (this.isAnimating || this.isRemovingMatches || this.isFilling) {
             return;
         }
 
@@ -142,7 +149,7 @@ class Grid {
     }
 
     removeMatches(matches) {
-        if (this.isRemovingMatches || this.isAnimating) return;
+        if (this.isRemovingMatches || this.isAnimating || this.isFilling) return;
 
         this.matchesToRemove = matches;
         this.matchesToRemove.forEach(match => {
@@ -161,7 +168,6 @@ class Grid {
             this.isRemovingMatches = false;
             this.shiftTilesDown();
             this.fillEmptyTiles();
-            draw();
             return;
         }
 
@@ -174,9 +180,9 @@ class Grid {
                     this.grid[tile.row][tile.col].alpha -= animationStep;
                     allTilesFaded = false;
                 } else {
-                   if (this.grid[tile.row][tile.col]) {
-                     this.grid[tile.row][tile.col].alpha = 0;
-                   }
+                    if (this.grid[tile.row][tile.col]) {
+                        this.grid[tile.row][tile.col].alpha = 0;
+                    }
                 }
             });
         });
@@ -189,10 +195,10 @@ class Grid {
             console.log("Match removal animation complete");
             this.matchesToRemove.forEach(match => {
                 match.forEach(tile => {
-                     if (this.grid[tile.row][tile.col]) {
+                    if (this.grid[tile.row][tile.col]) {
                         this.grid[tile.row][tile.col].destroy();
                         this.grid[tile.row][tile.col] = null; // remove Tile from grid
-                     }
+                    }
 
                 });
             });
@@ -200,7 +206,6 @@ class Grid {
             this.isRemovingMatches = false;
             this.shiftTilesDown();
             this.fillEmptyTiles();
-            draw();
         }
     }
 
@@ -221,19 +226,52 @@ class Grid {
         }
     }
 
-    fillEmptyTiles() {
+     fillEmptyTiles() {
+        if (this.isFilling || this.isAnimating || this.isRemovingMatches) return;
+        this.isFilling = true;
+
+        // Create the new tiles with their initial yOffset values
         for (let row = 0; row < this.gridHeight; row++) {
             for (let col = 0; col < this.gridWidth; col++) {
                 if (!this.grid[row][col] || this.grid[row][col] === null) {
                     this.grid[row][col] = this.createRandomTile(row, col);
-                    this.grid[row][col].alpha = 1; // Reset alpha for new tiles
                 }
             }
+        }
+
+        this.animateTileDrop();
+    }
+
+    animateTileDrop() {
+        let allTilesLanded = true;
+        const dropSpeed = 10; // Adjust this value to control the drop speed
+
+        for (let row = 0; row < this.gridHeight; row++) {
+            for (let col = 0; col < this.gridWidth; col++) {
+                const tile = this.grid[row][col];
+
+                if (tile && tile.yOffset < 0) {
+                    tile.yOffset += dropSpeed;
+                    if (tile.yOffset >= 0) {
+                        tile.yOffset = 0;  // Ensure the tile doesn't overshoot
+                    }
+                    allTilesLanded = false;
+                }
+            }
+        }
+
+        if (!allTilesLanded) {
+            requestAnimationFrame(() => this.animateTileDrop());
+            draw();
+        } else {
+            this.isFilling = false;
+            this.handleMatches();
+            draw();
         }
     }
 
     handleMatches() {
-       if (this.isAnimating || this.isRemovingMatches) return; // Add this line
+        if (this.isAnimating || this.isRemovingMatches || this.isFilling) return; // Add this line
 
         let matches;
         do {
@@ -259,7 +297,7 @@ class Grid {
                     const tileImage = assets[tileImageKey];
 
                     let x = col * (tileSize + padding);
-                    let y = row * (tileSize + padding);
+                    let y = row * (tileSize + padding) + tile.yOffset;  // Apply yOffset here
                     let width = tileSize;
                     let height = tileSize;
 
@@ -299,7 +337,7 @@ class Grid {
                         }
                     }
 
-                     // Set alpha for fading effect
+                    // Set alpha for fading effect
                     ctx.globalAlpha = tile.alpha;
 
                     ctx.drawImage(tileImage, x, y, width, height);
@@ -398,7 +436,7 @@ window.onload = function() {
     });
 
     function handleTileClick(row, col) {
-        if (gridObj.isAnimating || gridObj.isRemovingMatches) return;
+        if (gridObj.isAnimating || gridObj.isRemovingMatches || gridObj.isFilling) return;
 
         if (selectedTile === null) {
             selectedTile = { row: row, col: col };
