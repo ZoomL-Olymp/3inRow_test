@@ -12,6 +12,7 @@ class Tile {
 
     destroy() {
         this.type = null;
+        this.alpha = 1; // Reset alpha for new tiles
         console.log("info: tile destroyed");
     }
 }
@@ -141,7 +142,7 @@ class Grid {
     }
 
     removeMatches(matches) {
-        if (this.isRemovingMatches) return;
+        if (this.isRemovingMatches || this.isAnimating) return;
 
         this.matchesToRemove = matches;
         this.matchesToRemove.forEach(match => {
@@ -153,7 +154,7 @@ class Grid {
         this.animateMatchRemoval();
     }
 
-   animateMatchRemoval() {
+    animateMatchRemoval() {
         const animationStep = 0.02;
 
         if (this.matchesToRemove.length === 0) {
@@ -168,11 +169,14 @@ class Grid {
 
         this.matchesToRemove.forEach(match => {
             match.forEach(tile => {
-                if (this.grid[tile.row][tile.col].alpha > 0) {
+                // Check if the tile is still valid before trying to animate it
+                if (this.grid[tile.row][tile.col] && this.grid[tile.row][tile.col].alpha > 0) {
                     this.grid[tile.row][tile.col].alpha -= animationStep;
                     allTilesFaded = false;
-                } else { 
-                   this.grid[tile.row][tile.col].alpha = 0;
+                } else {
+                   if (this.grid[tile.row][tile.col]) {
+                     this.grid[tile.row][tile.col].alpha = 0;
+                   }
                 }
             });
         });
@@ -185,7 +189,11 @@ class Grid {
             console.log("Match removal animation complete");
             this.matchesToRemove.forEach(match => {
                 match.forEach(tile => {
-                    this.grid[tile.row][tile.col].destroy();
+                     if (this.grid[tile.row][tile.col]) {
+                        this.grid[tile.row][tile.col].destroy();
+                        this.grid[tile.row][tile.col] = null; // remove Tile from grid
+                     }
+
                 });
             });
             this.matchesToRemove = [];
@@ -206,7 +214,7 @@ class Grid {
                 } else if (emptyRows.length > 0) {
                     const bottomEmptyRow = emptyRows.shift();
                     this.grid[bottomEmptyRow][col] = this.grid[row][col];
-                    this.grid[row][col] = new Tile(null, null);
+                    this.grid[row][col] = null; // Set it to null
                     emptyRows.push(row);
                 }
             }
@@ -216,7 +224,7 @@ class Grid {
     fillEmptyTiles() {
         for (let row = 0; row < this.gridHeight; row++) {
             for (let col = 0; col < this.gridWidth; col++) {
-                if (!this.grid[row][col] || this.grid[row][col].type === null) {
+                if (!this.grid[row][col] || this.grid[row][col] === null) {
                     this.grid[row][col] = this.createRandomTile(row, col);
                     this.grid[row][col].alpha = 1; // Reset alpha for new tiles
                 }
